@@ -74,7 +74,8 @@ def _call_groq_json(prompt: str):
                 }
             ],
             temperature=0.5,
-            max_tokens=2048
+            max_tokens=2048,
+            response_format={"type": "json_object"},
         )
 
         output = response.choices[0].message.content
