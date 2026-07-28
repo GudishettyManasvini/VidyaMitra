@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import traceback
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +10,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from groq import Groq
 from pydantic import BaseModel, Field
+
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
@@ -32,60 +32,82 @@ app.add_middleware(
 
 class ResumeTextRequest(BaseModel):
     resume_text: str = Field(min_length=1)
+    target_role: str = Field(
+        default="General career guidance",
+        min_length=2,
+        max_length=100,
+    )
 
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1)
 
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+def _get_groq_client() -> Groq:
+    api_key = (os.getenv("GROQ_API_KEY") or "").strip()
+    if not api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="GROQ_API_KEY is not configured. Add it to your .env file.",
+        )
+    return Groq(api_key=api_key)
 
 
-def _extract_json(text: str):
-    text = text.strip()
+def _parse_json_response(raw_text: str | None) -> dict[str, Any]:
+    """Read one JSON object, including a fallback for accidental code fences."""
+    if not raw_text:
+        raise HTTPException(status_code=502, detail="Groq returned an empty response.")
 
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?", "", text)
-        text = re.sub(r"```$", "", text)
-        text = text.strip()
+    cleaned = raw_text.strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned).strip()
 
-    start = text.find("{")
-    end = text.rfind("}")
-
-    if start != -1 and end != -1:
-        text = text[start:end + 1]
-
-    return json.loads(text)
-
-
-def _call_groq_json(prompt: str):
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        cleaned = cleaned[start : end + 1]
 
     try:
-        response = client.chat.completions.create(
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Groq returned invalid JSON. Please try again.",
+        ) from exc
+
+    if not isinstance(parsed, dict):
+        raise HTTPException(status_code=502, detail="Groq response was not a JSON object.")
+
+    return parsed
+
+
+def _call_groq_json(prompt: str) -> dict[str, Any]:
+    try:
+        completion = _get_groq_client().chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
                 {
                     "role": "system",
-                    "content": "You always return valid JSON only. Never use markdown."
+                    "content": (
+                        "Return only one valid JSON object. Do not use Markdown, "
+                        "code fences, or text outside the JSON."
+                    ),
                 },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
+                {"role": "user", "content": prompt},
             ],
-            temperature=0.5,
+            temperature=0.4,
             max_tokens=2048,
             response_format={"type": "json_object"},
         )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Groq request failed: {exc}") from exc
 
-        output = response.choices[0].message.content
+    if not completion.choices:
+        raise HTTPException(status_code=502, detail="Groq returned no response choices.")
 
-        return _extract_json(output)
-
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
+    return _parse_json_response(completion.choices[0].message.content)
 
 
 @app.get("/")
@@ -125,64 +147,69 @@ async def upload_resume(file: UploadFile = File(...)) -> dict[str, str]:
 @app.post("/analyze")
 def analyze_resume(request: ResumeTextRequest) -> dict[str, Any]:
     prompt = (
-        "You are an ATS resume evaluator. Analyse only the resume provided. Return valid JSON with exactly:"
-        "{"
-        "ats_score: number between 0 and 100,"
-        "strengths: array of 3 specific strengths found in the resume,"
-        "improvements: array of 3 specific resume improvements,"
-        "missing_skills: array of 4 useful missing skills based on the candidate profile,"
-        "feedback: one personalised paragraph"
-        "}"
-        "Never use fixed or demo results. Do not invent existing skills."
-        f"\nResume text:\n{request.resume_text}"
+        "You are an ATS resume evaluator and career coach. "
+        f"The candidate's target role is {request.target_role}. "
+        "Analyse only the provided resume against the requirements of that target role. "
+        "Return JSON with exactly these keys: target_role (string), ats_score "
+        "(number from 0 to 100), role_match_score (number from 0 to 100), "
+        "strengths (array of exactly 3 strengths found in the resume), "
+        "matched_skills (array of resume skills relevant to the target role), "
+        "improvements (array of exactly 3 specific resume improvements), "
+        "missing_skills (array of exactly 4 important skills missing for the target role), "
+        "priority_skills (array of exactly 4 objects, each with skill, priority, and reason), "
+        "project_suggestions (array of exactly 2 portfolio projects for the target role), "
+        "and feedback (one personalised paragraph). "
+        "Never use fixed or demo results. Do not invent skills already present in the resume."
+        f"\n\nTarget role: {request.target_role}"
+        f"\n\nResume text:\n{request.resume_text}"
     )
-
     return _call_groq_json(prompt)
 
 
 @app.post("/career")
 def get_career_recommendations(request: ResumeTextRequest) -> dict[str, Any]:
     prompt = (
-        "You are a career guidance assistant. Return valid JSON in this exact shape:"
-        "{\"careers\":[{\"role\":\"career role\",\"fit\":number 0 to 100,\"reason\":\"specific reason based on resume\",\"skills\":[\"skill1\",\"skill2\",\"skill3\",\"skill4\"]}]}"
-        "Return exactly 3 personalised career recommendations based only on the resume provided. Do not return static responses."
-        f"\nResume text:\n{request.resume_text}"
+        "You are a career guidance assistant. "
+        f"The candidate's selected target role is {request.target_role}. "
+        "Return JSON in this exact shape: "
+        '{"careers":[{"role":"career role","fit":75,"reason":"specific reason based on '
+        'resume","skills":["skill1","skill2","skill3","skill4"]}]}. '
+        "Return exactly 3 personalised career recommendations based only on the resume. "
+        "Return exactly 3 alternative career roles based on the resume. Do not include the selected target role in the careers array because it is already assessed separately."
+        f"\n\nResume text:\n{request.resume_text}"
     )
-
     return _call_groq_json(prompt)
 
 
 @app.post("/roadmap")
 def get_roadmap(request: ResumeTextRequest) -> dict[str, Any]:
     prompt = (
-        "You are a learning planner. Return valid JSON in this exact shape:"
-        "{\"roadmap\":[{\"week\":raise\"Weeks 1–4\",\"title\":\"phase title\",\"tasks\":[\"task1\",\"task2\",\"task3\"]},"
-        "{\"week\":\"Weeks 5–8\",\"title\":\"phase title\",\"tasks\":[\"task1\",\"task2\",\"task3\"]},"
-        "{\"week\":\"Weeks 9–12\",\"title\":\"phase title\",\"tasks\":[\"task1\",\"task2\",\"task3\"]}]}"
-        "Make the plan personalised to the skills and gaps in the actual resume."
-        f"\nResume text:\n{request.resume_text}"
+        "You are a learning planner. "
+        f"Create a roadmap for the target role: {request.target_role}. "
+        "Return JSON in this exact shape: "
+        '{"roadmap":[{"week":"Weeks 1-4","title":"phase title",'
+        '"tasks":["task1","task2","task3"]},{"week":"Weeks 5-8",'
+        '"title":"phase title","tasks":["task1","task2","task3"]},'
+        '{"week":"Weeks 9-12","title":"phase title",'
+        '"tasks":["task1","task2","task3"]}]}. '
+        "Make the plan personalised to the actual resume, its skill gaps, and the target role."
+        f"\n\nResume text:\n{request.resume_text}"
     )
-
     return _call_groq_json(prompt)
 
 
 @app.post("/chat")
 def chat_with_mentor(request: ChatRequest) -> dict[str, str]:
     prompt = (
-        "You are a supportive career mentor for college students. Respond warmly and practically."
-        f"\nStudent message:\n{request.message}"
+        "You are a supportive career mentor for college students. Respond warmly "
+        "and practically. Return JSON with exactly one key, response, whose value "
+        "is a short supportive career mentor answer."
+        f"\n\nStudent message:\n{request.message}"
     )
-
-    result = _call_groq_json(
-        "Return valid JSON with exactly one key 'response' and a short supportive career mentor answer."
-        f"\n{prompt}"
-    )
-
+    result = _call_groq_json(prompt)
     response_text = result.get("response")
-    if not isinstance(response_text, str) or not response_text.strip():
-        raise HTTPException(
-    status_code=502,
-    detail="Groq did not return a valid chat response.",
-)
 
-    return {"response": response_text}
+    if not isinstance(response_text, str) or not response_text.strip():
+        raise HTTPException(status_code=502, detail="Groq did not return a valid chat response.")
+
+    return {"response": response_text.strip()}

@@ -18,18 +18,27 @@ export const uploadResume = async (file) => {
   return response.data
 }
 
-export const analyzeResume = async (resumeText) => {
-  const response = await api.post('/analyze', { resume_text: resumeText })
+export const analyzeResume = async (resumeText, targetRole) => {
+  const response = await api.post('/analyze', {
+    resume_text: resumeText,
+    target_role: targetRole,
+  })
   return response.data
 }
 
-export const getCareerRecommendations = async (resumeText) => {
-  const response = await api.post('/career', { resume_text: resumeText })
+export const getCareerRecommendations = async (resumeText, targetRole) => {
+  const response = await api.post('/career', {
+    resume_text: resumeText,
+    target_role: targetRole,
+  })
   return response.data
 }
 
-export const getRoadmap = async (resumeText) => {
-  const response = await api.post('/roadmap', { resume_text: resumeText })
+export const getRoadmap = async (resumeText, targetRole) => {
+  const response = await api.post('/roadmap', {
+    resume_text: resumeText,
+    target_role: targetRole,
+  })
   return response.data
 }
 
