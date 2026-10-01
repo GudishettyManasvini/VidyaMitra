@@ -1,9 +1,9 @@
 import re
 
-MAX_PDF_SIZE = 5 * 1024 * 1024  # 5 MB
+MAX_PDF_SIZE = 5 * 1024 * 1024  
 MAX_PDF_PAGES = 10
 MAX_RESUME_TEXT_LENGTH = 20000
-MAX_CHAT_MESSAGE_LENGTH = 2000
+MAX_CHAT_LENGTH = 2000
 
 
 def validate_pdf_content(contents: bytes) -> None:
@@ -15,7 +15,7 @@ def validate_pdf_content(contents: bytes) -> None:
     if len(contents) > MAX_PDF_SIZE:
         raise ValueError("PDF file is too large. Maximum size is 5 MB.")
 
-    # PDF files normally begin with the %PDF- signature.
+    
     if not contents.startswith(b"%PDF-"):
         raise ValueError("Uploaded file is not a valid PDF.")
 
@@ -51,14 +51,14 @@ def mask_pii(text: str) -> str:
     sending resume content to an external AI service.
     """
 
-    # Email addresses
+    
     text = re.sub(
         r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
         "[EMAIL REDACTED]",
         text,
     )
 
-    # Indian-style phone numbers and common international formats
+    
     text = re.sub(
         r"(?<!\d)(?:\+91[-\s]?)?[6-9]\d{9}(?!\d)",
         "[PHONE REDACTED]",
@@ -103,10 +103,10 @@ def validate_chat_message(message: str) -> str:
     if not message:
         raise ValueError("Message cannot be empty.")
 
-    if len(message) > MAX_CHAT_MESSAGE_LENGTH:
+    if len(message) > MAX_CHAT_LENGTH:
         raise ValueError(
             f"Message is too long. Maximum length is "
-            f"{MAX_CHAT_MESSAGE_LENGTH} characters."
+            f"{MAX_CHAT_LENGTH} characters."
         )
 
     return message
