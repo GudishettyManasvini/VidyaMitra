@@ -3,7 +3,7 @@ import re
 MAX_PDF_SIZE = 5 * 1024 * 1024  
 MAX_PDF_PAGES = 10
 MAX_RESUME_TEXT_LENGTH = 20000
-MAX_CHAT_LENGTH = 2000
+MAX_CHAT_MESSAGE_LENGTH = 2000
 
 
 def validate_pdf_content(contents: bytes) -> None:
@@ -30,7 +30,7 @@ def validate_page_count(page_count: int) -> None:
 
 
 def validate_resume_text(text: str) -> str:
-    """Validate and normalize extracted resume text."""
+    """Validates extracted resume text."""
 
     text = text.strip()
 
@@ -47,21 +47,22 @@ def validate_resume_text(text: str) -> str:
 
 def mask_pii(text: str) -> str:
     """
-    Mask common personally identifiable information before
-    sending resume content to an external AI service.
-    """
+        Mask common personally identifiable information before
+        sending resume content to an external AI service.
+        mainly focused on email and phone numbers.
+        """
 
     
     text = re.sub(
         r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
-        "[EMAIL REDACTED]",
+        "[EMAIL MASKED]",
         text,
     )
 
     
     text = re.sub(
         r"(?<!\d)(?:\+91[-\s]?)?[6-9]\d{9}(?!\d)",
-        "[PHONE REDACTED]",
+        "[PHONE MASKED]",
         text,
     )
 
@@ -70,10 +71,10 @@ def mask_pii(text: str) -> str:
 
 def detect_prompt_injection(text: str) -> bool:
     """
-    Detect common prompt-injection patterns.
+
 
     This is only a heuristic detection layer.
-    It should not be treated as a complete prompt-injection solution.
+    It's not completely promt injection.
     """
 
     suspicious_patterns = [
@@ -103,10 +104,10 @@ def validate_chat_message(message: str) -> str:
     if not message:
         raise ValueError("Message cannot be empty.")
 
-    if len(message) > MAX_CHAT_LENGTH:
+    if len(message) > MAX_CHAT_MESSAGE_LENGTH:
         raise ValueError(
             f"Message is too long. Maximum length is "
-            f"{MAX_CHAT_LENGTH} characters."
+            f"{MAX_CHAT_MESSAGE_LENGTH} characters."
         )
 
     return message
