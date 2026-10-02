@@ -7,7 +7,7 @@ MAX_CHAT_MESSAGE_LENGTH = 2000
 
 
 def validate_pdf_content(contents: bytes) -> None:
-    """Validate the uploaded PDF before processing it."""
+    """validate the uploaded PDF before processing it."""
 
     if not contents:
         raise ValueError("Uploaded file is empty.")
@@ -21,7 +21,7 @@ def validate_pdf_content(contents: bytes) -> None:
 
 
 def validate_page_count(page_count: int) -> None:
-    """Prevent excessively large PDF documents."""
+    """prevent very large PDF documents."""
 
     if page_count > MAX_PDF_PAGES:
         raise ValueError(
@@ -47,9 +47,8 @@ def validate_resume_text(text: str) -> str:
 
 def mask_pii(text: str) -> str:
     """
-        Mask common personally identifiable information before
-        sending resume content to an external AI service.
-        mainly focused on email and phone numbers.
+       
+        for now masks email and phone numbers.
         """
 
     
@@ -71,8 +70,6 @@ def mask_pii(text: str) -> str:
 
 def detect_prompt_injection(text: str) -> bool:
     """
-
-
     This is only a heuristic detection layer.
     It's not completely promt injection.
     """
@@ -97,7 +94,7 @@ def detect_prompt_injection(text: str) -> bool:
 
 
 def validate_chat_message(message: str) -> str:
-    """Validate mentor-chat input."""
+    """Validate chatbot message input."""
 
     message = message.strip()
 
