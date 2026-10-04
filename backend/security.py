@@ -1,110 +1,82 @@
-import re
+max_size_of_pdf = 5 * 1024 * 1024
+pdf_pages_max = 10
+resume_text_length = 20000
+chatbot_message_length = 2000
 
-MAX_PDF_SIZE = 5 * 1024 * 1024  
-MAX_PDF_PAGES = 10
-MAX_RESUME_TEXT_LENGTH = 20000
-MAX_CHAT_MESSAGE_LENGTH = 2000
-
-
-def validate_pdf_content(contents: bytes) -> None:
-    """validate the uploaded PDF before processing it."""
+def checking_pdf_info(contents: bytes) -> None:
 
     if not contents:
         raise ValueError("Uploaded file is empty.")
 
-    if len(contents) > MAX_PDF_SIZE:
+    if len(contents) > max_size_of_pdf:
         raise ValueError("PDF file is too large. Maximum size is 5 MB.")
 
-    
     if not contents.startswith(b"%PDF-"):
         raise ValueError("Uploaded file is not a valid PDF.")
 
+def checks_page_count(page_count: int) -> None:
 
-def validate_page_count(page_count: int) -> None:
-    """prevent very large PDF documents."""
-
-    if page_count > MAX_PDF_PAGES:
+    if page_count > pdf_pages_max:
         raise ValueError(
-            f"PDF contains too many pages. Maximum allowed is {MAX_PDF_PAGES}."
+            f"PDF contains too many pages. Maximum allowed is {pdf_pages_max}."
         )
 
-
-def validate_resume_text(text: str) -> str:
-    """Validates extracted resume text."""
+def check_resume_text(text: str) -> str:
 
     text = text.strip()
 
-    if not text:
+    if text == "":
         raise ValueError("No readable text found in the uploaded PDF.")
 
-    if len(text) > MAX_RESUME_TEXT_LENGTH:
-        raise ValueError(
-            "Resume contains too much text. Please upload a shorter document."
-        )
+    if len(text) > resume_text_length:
+        raise ValueError("Resume contains too much text.")
 
     return text
 
+def mask_personal_info(text: str) -> str:
 
-def mask_pii(text: str) -> str:
-    """
-       
-        for now masks email and phone numbers.
-        """
+    words = text.split()
+    new_words = []
 
-    
-    text = re.sub(
-        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
-        "[EMAIL MASKED]",
-        text,
-    )
+    for word in words:
+        if "@" in word and "." in word:
+            new_words.append("[EMAIL MASKED]")
+        elif word.isdigit() and len(word) == 10:
+            new_words.append("[PHONE MASKED]")
+        else:
+            new_words.append(word)
 
-    
-    text = re.sub(
-        r"(?<!\d)(?:\+91[-\s]?)?[6-9]\d{9}(?!\d)",
-        "[PHONE MASKED]",
-        text,
-    )
+    return " ".join(new_words)
 
-    return text
-
-
-def detect_prompt_injection(text: str) -> bool:
-    """
-    This is only a heuristic detection layer.
-    It's not completely promt injection.
-    """
+def check_prompt_injection(text: str) -> bool:
 
     suspicious_patterns = [
-        r"ignore\s+(all\s+)?previous\s+instructions",
-        r"ignore\s+the\s+instructions",
-        r"disregard\s+(all\s+)?previous",
-        r"system\s+prompt",
-        r"reveal\s+your\s+instructions",
-        r"you\s+are\s+now\s+",
-        r"act\s+as\s+",
-        r"developer\s+message",
+        "ignore previous instructions",
+        "ignore the instructions",
+        "disregard previous instructions",
+        "system prompt",
+        "reveal your instructions",
+        "you are now",
+        "act as",
+        "developer message",
     ]
 
-    lowered = text.lower()
+    text = text.lower()
 
-    return any(
-        re.search(pattern, lowered)
-        for pattern in suspicious_patterns
-    )
+    for pattern in suspicious_patterns:
+        if pattern in text:
+            return True
 
+    return False
 
-def validate_chat_message(message: str) -> str:
-    """Validate chatbot message input."""
+def chatbot_message(message: str) -> str:
 
     message = message.strip()
 
-    if not message:
-        raise ValueError("Message cannot be empty.")
+    if message == "":
+        raise ValueError("Chatbot message is empty.")
 
-    if len(message) > MAX_CHAT_MESSAGE_LENGTH:
-        raise ValueError(
-            f"Message is too long. Maximum length is "
-            f"{MAX_CHAT_MESSAGE_LENGTH} characters."
-        )
+    if len(message) > chatbot_message_length:
+        raise ValueError("Message is too long.")
 
     return message

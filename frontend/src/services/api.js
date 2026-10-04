@@ -9,11 +9,7 @@ export const uploadResume = async (file) => {
   const formData = new FormData()
   formData.append('file', file)
 
-  const response = await api.post('/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  })
+  const response = await api.post('/upload', formData)
 
   return response.data
 }
@@ -23,6 +19,7 @@ export const analyzeResume = async (resumeText, targetRole) => {
     resume_text: resumeText,
     target_role: targetRole,
   })
+
   return response.data
 }
 
@@ -31,6 +28,7 @@ export const getCareerRecommendations = async (resumeText, targetRole) => {
     resume_text: resumeText,
     target_role: targetRole,
   })
+
   return response.data
 }
 
@@ -39,15 +37,20 @@ export const getRoadmap = async (resumeText, targetRole) => {
     resume_text: resumeText,
     target_role: targetRole,
   })
+
   return response.data
 }
 
 export const chatWithMentor = async (message) => {
-  const response = await api.post('/chat', { message })
+  const response = await api.post('/chat', {
+    message: message,
+  })
+
   return response.data
 }
 
 export const getApiErrorMessage = (error) => {
+
   if (error.response?.data?.detail) {
     return error.response.data.detail
   }
