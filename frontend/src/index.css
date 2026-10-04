@@ -516,8 +516,6 @@ a:focus-visible {
 
 /* AI Mentor Button */
 
-/* AI Mentor Button */
-
 .mentor-fab {
   position: fixed;
   right: 25px;
@@ -547,12 +545,13 @@ a:focus-visible {
   box-shadow: 0 14px 35px rgba(31, 111, 235, 0.4);
 }
 
+
 /* AI Mentor Chat Window */
 
-.mentor-chat {
+.mentor-popover {
   position: fixed;
   right: 25px;
-  bottom: 25px;
+  bottom: 85px;
 
   width: 370px;
   height: 520px;
@@ -572,6 +571,7 @@ a:focus-visible {
   z-index: 1001;
 }
 
+
 /* Chat Header */
 
 .mentor-header {
@@ -587,15 +587,25 @@ a:focus-visible {
   color: white;
 }
 
-.mentor-header h3 {
+.mentor-title {
   margin: 0;
+
+  color: white;
   font-size: 18px;
   font-weight: 800;
 }
 
-.mentor-header button {
+.mentor-status {
+  margin: 3px 0 0;
+
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+}
+
+.mentor-close {
   border: none;
   background: transparent;
+
   color: white;
 
   font-size: 28px;
@@ -604,9 +614,10 @@ a:focus-visible {
   cursor: pointer;
 }
 
-.mentor-header button:hover {
+.mentor-close:hover {
   opacity: 0.8;
 }
+
 
 /* Chat Messages */
 
@@ -625,7 +636,7 @@ a:focus-visible {
   background: #f7f9fd;
 }
 
-.mentor-message {
+.chat-bubble {
   max-width: 82%;
 
   padding: 10px 13px;
@@ -638,7 +649,7 @@ a:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.mentor-message.user {
+.chat-bubble.user {
   align-self: flex-end;
 
   background: #2563eb;
@@ -647,7 +658,7 @@ a:focus-visible {
   border-bottom-right-radius: 4px;
 }
 
-.mentor-message.assistant {
+.chat-bubble.bot {
   align-self: flex-start;
 
   background: white;
@@ -658,9 +669,10 @@ a:focus-visible {
   border-bottom-left-radius: 4px;
 }
 
+
 /* Chat Input */
 
-.mentor-input {
+.mentor-form {
   display: flex;
   gap: 8px;
 
@@ -671,7 +683,7 @@ a:focus-visible {
   border-top: 1px solid #e2e8f0;
 }
 
-.mentor-input input {
+.mentor-form input {
   min-width: 0;
   flex: 1;
 
@@ -683,18 +695,17 @@ a:focus-visible {
   outline: none;
 
   background: white;
-
   color: #10223b;
 
   font-size: 14px;
 }
 
-.mentor-input input:focus {
+.mentor-form input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-.mentor-input button {
+.mentor-form button {
   padding: 10px 15px;
 
   border: none;
@@ -708,14 +719,15 @@ a:focus-visible {
   cursor: pointer;
 }
 
-.mentor-input button:hover {
+.mentor-form button:hover {
   background: #1d4ed8;
 }
 
-.mentor-input button:disabled {
+.mentor-form button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
 
 /* Responsive Design */
 
@@ -730,6 +742,7 @@ a:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
 
 @media (max-width: 640px) {
   .app-shell {
@@ -768,13 +781,13 @@ a:focus-visible {
   /* Mobile AI Mentor */
 
   .mentor-fab {
-  right: 15px;
-  bottom: 15px;
-}
+    right: 15px;
+    bottom: 15px;
+  }
 
-  .mentor-chat {
+  .mentor-popover {
     right: 10px;
-    bottom: 10px;
+    bottom: 75px;
 
     width: calc(100vw - 20px);
     height: 70vh;

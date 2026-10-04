@@ -45,7 +45,9 @@ function MentorChat({ onClose }) {
         ...currentMessages,
         {
           role: 'bot',
-          text: response.response || 'I can help you with your career journey.',
+          text:
+            response.response ||
+            'I can help you with your career journey.',
         },
       ])
     } catch (error) {
@@ -57,7 +59,7 @@ function MentorChat({ onClose }) {
 
   return (
     <section
-      className="mentor-popover"
+      className="mentor-chat"
       aria-label="AI career mentor"
     >
 
@@ -93,6 +95,12 @@ function MentorChat({ onClose }) {
             {item.text}
           </div>
         ))}
+
+        {loading && (
+          <div className="chat-bubble bot">
+            Thinking...
+          </div>
+        )}
 
       </div>
 

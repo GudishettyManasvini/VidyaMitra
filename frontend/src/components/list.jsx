@@ -29,4 +29,4 @@ function List({ title, items }) {
 }
 
 
-export default List
+export default Lists

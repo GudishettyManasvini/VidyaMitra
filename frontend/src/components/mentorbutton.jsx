@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import MentorChat from './MentorChat'
+import MentorChat from './mentorchat'
 
 function MentorButton() {
   const [isOpen, setIsOpen] = useState(false)
